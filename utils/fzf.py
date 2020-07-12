@@ -1,12 +1,12 @@
 from subprocess import Popen, PIPE
 
-def wrapper(string, charset='utf-8', decode=True, strip=True):
+def wrapper(input_data, charset='utf-8', decode=True, strip=True):
     """Wrapper for fzf.
 
     Pipes `string` to fzf and returns response or None in case of error
 
     Args:
-        string (bytes or str): Data to be sent to fzf stdin.
+        string (byte, str or list): Data to be sent to fzf stdin.
         charset (str): Charset used for converting `bytes` <-> `str`.
         decode (bool): Wether to decode fzf `bytes` response to `str`.
         strip (bool): Wether to strip newlines from fzf response.
@@ -14,10 +14,12 @@ def wrapper(string, charset='utf-8', decode=True, strip=True):
 
     str_to_pipe_in = bytes()
 
-    if type(string) == bytes:
-        str_to_pipe_in = string
-    elif type(string) = str:
-        str_to_pipe_in = string.encode(charset)
+    if type(input_data) == bytes:
+        str_to_pipe_in = input_data
+    elif type(input_data) == str:
+        str_to_pipe_in = input_data.encode(charset)
+    elif type(input_data) == list:
+        str_to_pipe_in = "\n".join(input_data).encode(charset)
     else:
         return None
 
