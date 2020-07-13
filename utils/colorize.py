@@ -89,23 +89,29 @@ ATTRIBUTES = CODES.keys()
 
 # This can be .format()'ted or used as f-string.
 # "\x1b[{code}m":
+
 ENCODE_ATTR = '{csi}{{code}}m'.format(csi=CSI)
+CSI_ESCAPE = '{csi}{{codeseq}}m'.format(csi=CSI)
 
 # these are so to be used as f-strings:
 #
 # "\x1b[{fg_or_bg_code};2;{r};{g};{b}m":
 ENCODE_RGB = '{csi}{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}m'.format(csi=CSI)
+# "{fg_or_bg_code};2;{r};{g};{b}":
+RGB_CODESEQ = '{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}'.format(csi=CSI)
 
 # "\x1b[38;2;{r};{g};{b}m":
 ENCODE_RGB_FG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=FG_CODE))
-FG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}};'
+# "38;2;{r};{g};{b}":
+FG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}}'
                   .format(csi=CSI, fg_or_bg_code=FG_CODE))
 
 # "\x1b[48;2;{r};{g};{b}m":
 ENCODE_RGB_BG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=BG_CODE))
-BG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}};'
+# "48;2;{r};{g};{b}":
+BG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}}'
                   .format(csi=CSI, fg_or_bg_code=BG_CODE))
 
 # "\x1b[0m"
@@ -132,6 +138,7 @@ def hexcolor_to_rgb(hex_color):
     rgb = tuple(map(lambda x: int(x, base=16), hex_tuple))
 
     return rgb
+
 
 def hex_to_hex(hex_color):
     """Removes the `#` from the beginning of the hex color if it has it.
@@ -181,9 +188,15 @@ class Colorize:
                                           b=bg[B_INDEX])
 
             attrs_seq = self._encode_attributes(attrs)
+            attrs_codeseq = self._attributes_code_seq(attrs)
 
             PALETTE_SEQ = "{csi}{attrs_codeseq}{fg_codeseq}{bg_codeseq}m"
-            palette_seq = attrs_seq + fg_seq + bg_seq
+            #palette_seq = attrs_seq + fg_seq + bg_seq
+            #palette_seq = ENCODE_ATTR.format(code=attrs_codeseq + fg_codeseq
+            #                                 + bg_codeseq)
+            palette_seq, codeseq = self._encode_codeseqs([attrs_codeseq,
+                                                          fg_codeseq,
+                                                          bg_codeseq])
 
             palette = dict()
             palette.update({
@@ -198,7 +211,8 @@ class Colorize:
                 'seq': palette_seq,
                 'fg_codeseq': fg_codeseq,
                 'bg_codeseq': bg_codeseq,
-                'attrs_codeseq': self._attributes_code_seq(attrs)
+                'attrs_codeseq': attrs_codeseq,
+                'codeseq': codeseq,
                 })
 
             self.palettes.update({name: palette})
@@ -251,6 +265,7 @@ class Colorize:
 
         return escaped_attrs
 
+
     def _attributes_code_seq(self, attrs):
         """Generates a list of the attributes code, without the escape char.
 
@@ -262,13 +277,14 @@ class Colorize:
             attrs (list): list containing one or more of values in
                 `ATTRIBUTES`.
         """
-        codelist = str()
+        code_list = list()
 
         for attr in attrs:
-            codelist += "{code};".format(code=CODES[attr])
+            code_list.append(CODES[attr])
             #escaped_attrs += "{code};".format(code=CODES[attr])
 
-        return codelist
+        return str(';').join(map(lambda x: str(x), code_list))
+
 
     def _encode_fg(self, hex_color):
         rgb = hexcolor_to_rgb(hex_color)
@@ -276,12 +292,18 @@ class Colorize:
             return ENCODE_RGB_FG.format(r=rgb[R_INDEX], g=rgb[G_INDEX],
                                         b=rgb[B_INDEX])
 
+
     def _encode_bg(self, hex_color):
         rgb = hexcolor_to_rgb(hex_color)
         if rgb:
             return ENCODE_RGB_BG.format(r=rgb[R_INDEX], g=rgb[G_INDEX],
                                         b=rgb[B_INDEX])
 
+    def _encode_codeseqs(self, codeseq_list):
+
+        codeseq_str = str(';').join(codeseq_list)
+
+        return (CSI_ESCAPE.format(codeseq=codeseq_str), codeseq_str)
 #     def _encode_fg_bg(self, palette, fg=True, bg=True):
 # 
 #         fg, bg, attrs = self.palettes[palette]
