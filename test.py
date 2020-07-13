@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-from utils import Colorize
-from utils import colorize
+from utils.colorize import Colorize
+from utils.colorize import colorize
 
 a = Colorize()
 a.add_palette(name='blue', foreground='#ffffff', background="#333366")
