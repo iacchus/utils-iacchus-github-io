@@ -120,8 +120,8 @@ def hexcolor_to_rgb(hex_color):
     returns a (r, g, b) tuple in a format like (255, 255, 255)
 
     Args:
-        hex_color (str): A rgb color in hexadecimal format, like #ffffff or
-            ffffff.
+        hex_color (str): A rgb color in hexadecimal format, like `#ffffff` or
+            `ffffff`.
     """
 
     hex_tuple = re.match(HEX_COLOR_PATTERN, hex_color).groups()
@@ -130,14 +130,11 @@ def hexcolor_to_rgb(hex_color):
     return rgb
 
 def hex_to_hex(hex_color):
-    """Converts hex color to rgb.
-
-    It converts hexadecimal color in the format `#ffffff` or `ffffff` and
-    returns a (r, g, b) tuple in a format like (255, 255, 255)
+    """Removes the `#` from the beginning of the hex color if it has it.
 
     Args:
-        hex_color (str): A rgb color in hexadecimal format, like #ffffff or
-            ffffff.
+        hex_color (str): A rgb color in hexadecimal format, like `#ffffff` or
+            `ffffff`.
     """
 
     hex_tuple = re.match(HEX_COLOR_PATTERN, hex_color).groups()
@@ -161,7 +158,7 @@ class Colorize:
         self.palettes = dict()
 
 
-    def add_palette(self, name, foreground, background, *attrs):
+    def add_palette(self, name, foreground, background, attrs=[]):
 
         #
         # TODO: SANITIZE THESE ENTRIES. PEOPLE MAKE MISTAKES.
@@ -178,32 +175,32 @@ class Colorize:
             bg_seq = ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
                                           b=bg[B_INDEX])
 
+            attrs_seq = self._encode_attributes(attrs)
+
+            palette_seq = attrs_seq + fg_seq + bg_seq
+
             palette = dict()
             palette.update({
                 'fg_rgb': hexcolor_to_rgb(foreground),
                 'bg_rgb':hexcolor_to_rgb(background),
                 'attrs': attributes,
-                'fg_hex': hex_to_hex(foregroundd),
+                'fg_hex': hex_to_hex(foreground),
                 'bg_hex': hex_to_hex(background),
                 'fg_seq': fg_seq,
                 'bg_seq': bg_seq,
-                'attrs_seq':,
-                'seq':,
+                'attrs_seq': attrs_seq,
+                'seq': palette_seq,
+                'attrs_codeseq': self._attributes_code_seq(attrs)
                 })
 
-            self.palettes.update({name: (fg, bg, attributes)})
+            self.palettes.update({name: palette})
 
 
     def from_palette(self, data, palette):
 
         if palette in self.palettes.keys():
 
-            fg, bg, attrs = self.palettes[palette]
-
-            escaped_attrs = self._encode_attributes(attrs)
-            escaped_fg_and_bg = self._encode_fg_bg(palette)
-
-            colorized = str().join([escaped_attrs, escaped_fg_and_bg, data])
+            colorized = str().join([self.palettes[palette]['seq'], data])
 
             return colorized
 
@@ -241,24 +238,55 @@ class Colorize:
         escaped_attrs = str()
 
         for attr in attrs:
-            escaped_attrs += ENCODE_ATTR.format(sci=SCI, code=CODES[attr])
+            escaped_attrs += ENCODE_ATTR.format(code=CODES[attr])
+            #escaped_attrs += "{code};".format(code=CODES[attr])
 
         return escaped_attrs
 
+    def _attributes_code_seq(self, attrs):
+        """Generates a list of the attributes code, without the escape char.
 
-    def _encode_fg_bg(self, palette, fg=True, bg=True):
+        Generates a list of codes of the attributes without escaping,
+            like this: `"1;3;4;7;"`
+            Useful for embedding the codes on an already escaped string.
 
-        fg, bg, attrs = self.palettes[palette]
+        Args:
+            attrs (list): list containing one or more of values in
+                `ATTRIBUTES`.
+        """
+        codelist = str()
 
-        encoded = str()
+        for attr in attrs:
+            codelist += "{code};".format(code=CODES[attr])
+            #escaped_attrs += "{code};".format(code=CODES[attr])
 
-        if fg:
-            r, g, b = fg
-            encoded += ENCODE_RGB_FG.format(r=fg[R_INDEX], g=fg[G_INDEX],
-                                            b=fg[B_INDEX])
+        return codelist
 
-        if bg:
-            encoded += ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
-                                            b=bg[B_INDEX])
+    def _encode_fg(self, hex_color):
+        rgb = hexcolor_to_rgb(hex_color)
+        if rgb:
+            return ENCODE_RGB_FG.format(r=rgb[R_INDEX], g=rgb[G_INDEX],
+                                        b=rgb[B_INDEX])
 
-        return encoded
+    def _encode_bg(self, hex_color):
+        rgb = hexcolor_to_rgb(hex_color)
+        if rgb:
+            return ENCODE_RGB_BG.format(r=rgb[R_INDEX], g=rgb[G_INDEX],
+                                        b=rgb[B_INDEX])
+
+#     def _encode_fg_bg(self, palette, fg=True, bg=True):
+# 
+#         fg, bg, attrs = self.palettes[palette]
+# 
+#         encoded = str()
+# 
+#         if fg:
+#             r, g, b = fg
+#             encoded += ENCODE_RGB_FG.format(r=fg[R_INDEX], g=fg[G_INDEX],
+#                                             b=fg[B_INDEX])
+# 
+#         if bg:
+#             encoded += ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
+#                                             b=bg[B_INDEX])
+# 
+#         return encoded
