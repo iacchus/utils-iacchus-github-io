@@ -83,15 +83,9 @@ CODES = {
 
 FG_CODE = CODES['setforegroundcolor']
 BG_CODE = CODES['setbackgroundcolor']
+RESET_CODE = CODES['normal']
 
 ATTRIBUTES = CODES.keys()
-
-#RESET = '\033[0m'
-#BOLD = '\033[1m'
-#FAINT = '\033[2m'
-#ITALIC = '\033[3m'
-#UNDERLINE = '\033[4m'
-#SLOW_BLINK = '\033[5m'
 
 # This can be .format()'ted or used as f-string.
 # "\x1b[{code}m":
@@ -99,30 +93,25 @@ ENCODE_ATTR = '{csi}{{code}}m'.format(csi=CSI)
 
 # these are so to be used as f-strings:
 #
-# "\x1b[{fg_or_bg_code};{r};{g};{b}m":
-ENCODE_RGB = '{csi}{{fg_or_bg_code}};{{r}};{{g}};{{b}}m'.format(csi=CSI)
+# "\x1b[{fg_or_bg_code};2;{r};{g};{b}m":
+ENCODE_RGB = '{csi}{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}m'.format(csi=CSI)
 
-# "\x1b[38;{r};{g};{b}m":
-ENCODE_RGB_FG = ('{csi}{fg_or_bg_code};{{r}};{{g}};{{b}}m'
+# "\x1b[38;2;{r};{g};{b}m":
+ENCODE_RGB_FG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=FG_CODE))
 
-# "\x1b[48;{r};{g};{b}m":
-ENCODE_RGB_BG = ('{csi}{fg_or_bg_code};{{r}};{{g}};{{b}}m'
+# "\x1b[48;2;{r};{g};{b}m":
+ENCODE_RGB_BG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=BG_CODE))
+
+# "\x1b[0m"
+RESET = ENCODE_ATTR.format(code=RESET_CODE)
 
 # matches as much as `#f3f3f3` as `f3f3f3` returning three hex groups, r, g, b.
 HEX_COLOR_PATTERN = '^#?([a-fA-F0-9]{2})([a-fA-F0-9]{2})([a-fA-F0-9]{2})$'
 
-#R, G, B = (0, 1, 2)
-#
-#def _escape(r, g, b, background=False):
-#
-#    #return '\033[{};2;{};{};{}m'.format(48 if background else 38, r, g, b)
-#    fg_or_bg = 48 if background else 38
-#
-#    escaped = f'\033[{fg_or_bg};2;{r};{g};{b}m'
-#
-#    return escaped
+R_INDEX, G_INDEX, B_INDEX = (0, 1, 2)
+
 
 def hexcolor_to_rgb(hex_color):
     """Converts hex color to rgb.
@@ -140,20 +129,21 @@ def hexcolor_to_rgb(hex_color):
 
     return rgb
 
-#def colorize(data, frk, fg='FFFFFF', bg='000000'):
-#
-#    foreground, background = (map(lambda x: hexcolor_to_rgb(x), (fg, bg)))
-#
-#    #print(foreground, background)
-#
-#    if foreground and background:
-#        colorized = (f" {frk:03} — " + _escape(*foreground) + _escape(*background, True)
-#                     + data +  f'\033[{frk}m ' + data + RESET)
-#
-#    else:
-#        return data
-#
-#    return colorized
+def hex_to_hex(hex_color):
+    """Converts hex color to rgb.
+
+    It converts hexadecimal color in the format `#ffffff` or `ffffff` and
+    returns a (r, g, b) tuple in a format like (255, 255, 255)
+
+    Args:
+        hex_color (str): A rgb color in hexadecimal format, like #ffffff or
+            ffffff.
+    """
+
+    hex_tuple = re.match(HEX_COLOR_PATTERN, hex_color).groups()
+
+    return "".join(hex_tuple)
+
 
 # https://github.com/simplegadget512/Truecolor/blob/master/truecolor.py
 # https://unix.stackexchange.com/questions/404414/print-true-color-24-bit-test-pattern
@@ -165,53 +155,110 @@ def hexcolor_to_rgb(hex_color):
 # https://wiki.bash-hackers.org/scripting/terminalcodes
 class Colorize:
 
+
     def __init__(self):
 
-        self.palette = dict()
+        self.palettes = dict()
 
-    # def add_palette(self, name, foreground, background, *attrs, **other):
+
     def add_palette(self, name, foreground, background, *attrs):
 
+        #
+        # TODO: SANITIZE THESE ENTRIES. PEOPLE MAKE MISTAKES.
+        #
         attributes = [attr for attr in attrs if attr in ATTRIBUTES]
 
         fg, bg = (hexcolor_to_rgb(foreground), hexcolor_to_rgb(background))
 
         if fg and bg:
-            self.palette.update({name: (fg, bg, attributes)})
+
+            fg_seq = ENCODE_RGB_FG.format(r=fg[R_INDEX], g=fg[G_INDEX],
+                                          b=fg[B_INDEX])
+
+            bg_seq = ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
+                                          b=bg[B_INDEX])
+
+            palette = dict()
+            palette.update({
+                'fg_rgb': hexcolor_to_rgb(foreground),
+                'bg_rgb':hexcolor_to_rgb(background),
+                'attrs': attributes,
+                'fg_hex': hex_to_hex(foregroundd),
+                'bg_hex': hex_to_hex(background),
+                'fg_seq': fg_seq,
+                'bg_seq': bg_seq,
+                'attrs_seq':,
+                'seq':,
+                })
+
+            self.palettes.update({name: (fg, bg, attributes)})
+
 
     def from_palette(self, data, palette):
 
-        if palette in self.palette.keys():
+        if palette in self.palettes.keys():
 
-            fg, bg, attrs = self.palette[palette]
+            fg, bg, attrs = self.palettes[palette]
 
             escaped_attrs = self._encode_attributes(attrs)
             escaped_fg_and_bg = self._encode_fg_bg(palette)
-            #colorized = _escape(*fg) + _escape(*bg, True) + data + RESET
+
             colorized = str().join([escaped_attrs, escaped_fg_and_bg, data])
 
             return colorized
 
+
+    def list_palettes(self):
+
+        for key, value in self.palettes:
+            pass
+
+
+    def get_palette_escape_sequencies(self, palette):
+        """Return the escape sequence for a palette.
+
+        Escapes and returns the escape sequencies generated for a given
+            palette.
+
+        Args:
+            palette (str): the palette name to get the sequences.
+        """
+
+        pass
+
+
+    def delete_palette(self, pallete):
+        """Deletes the palette."""
+
+        if self.palettes.pop(palette, None):
+            return True
+        else:
+            return False
+
+
     def _encode_attributes(self, attrs):
 
         escaped_attrs = str()
+
         for attr in attrs:
-            escaped_attrs += ENCODE.format(sci=SCI, code=CODES[attr])
+            escaped_attrs += ENCODE_ATTR.format(sci=SCI, code=CODES[attr])
 
         return escaped_attrs
 
+
     def _encode_fg_bg(self, palette, fg=True, bg=True):
 
-        fg, bg, attrs = self.palette[palette]
+        fg, bg, attrs = self.palettes[palette]
 
         encoded = str()
 
         if fg:
             r, g, b = fg
-            encoded += ENCODE_RGB_FG.format(r=r, g=g, b=b)
+            encoded += ENCODE_RGB_FG.format(r=fg[R_INDEX], g=fg[G_INDEX],
+                                            b=fg[B_INDEX])
 
         if bg:
-            r, g, b = bg
-            encoded += ENCODE_RGB_BG.format(r=r, g=g, b=b)
+            encoded += ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
+                                            b=bg[B_INDEX])
 
         return encoded
