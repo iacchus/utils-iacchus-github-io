@@ -140,20 +140,20 @@ def hexcolor_to_rgb(hex_color):
 
     return rgb
 
-def colorize(data, frk, fg='FFFFFF', bg='000000'):
-
-    foreground, background = (map(lambda x: hexcolor_to_rgb(x), (fg, bg)))
-
-    #print(foreground, background)
-
-    if foreground and background:
-        colorized = (f" {frk:03} — " + _escape(*foreground) + _escape(*background, True)
-                     + data +  f'\033[{frk}m ' + data + RESET)
-
-    else:
-        return data
-
-    return colorized
+#def colorize(data, frk, fg='FFFFFF', bg='000000'):
+#
+#    foreground, background = (map(lambda x: hexcolor_to_rgb(x), (fg, bg)))
+#
+#    #print(foreground, background)
+#
+#    if foreground and background:
+#        colorized = (f" {frk:03} — " + _escape(*foreground) + _escape(*background, True)
+#                     + data +  f'\033[{frk}m ' + data + RESET)
+#
+#    else:
+#        return data
+#
+#    return colorized
 
 # https://github.com/simplegadget512/Truecolor/blob/master/truecolor.py
 # https://unix.stackexchange.com/questions/404414/print-true-color-24-bit-test-pattern
@@ -184,8 +184,11 @@ class Colorize:
         if palette in self.palette.keys():
 
             fg, bg = self.palette[palette]
-            escaped_attrs = encode_attributes(attributes)
-            colorized = _escape(*fg) + _escape(*bg, True) + data + RESET
+
+            escaped_attrs = _encode_attributes(attributes)
+            escaped_bg_and_fg = self._escape_bg_fg(palette)
+            #colorized = _escape(*fg) + _escape(*bg, True) + data + RESET
+            colorized = str().join([escaped_attrs, escaped_fg_and_bg, data])
 
             return colorized
 
@@ -197,16 +200,15 @@ class Colorize:
 
         return escaped_attrs
 
-
     def _encode_fg_bg(self, palette, fg=True, bg=True):
+
+        fg, bg, attrs = self.palette[palette]
 
         encoded = str()
 
         if fg:
-            r, g, b =
-            encoded = ENCODE_RGB_FG.format()
-            pass
+            encoded += ENCODE_RGB_FG.format(*fg)
         if bg:
-            pass
+            encoded += ENCODE_RGB_BG.format(*bg)
 
         return encoded
