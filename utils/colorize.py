@@ -103,11 +103,11 @@ ENCODE_ATTR = '{csi}{{code}}m'.format(csi=CSI)
 ENCODE_RGB = '{csi}{{fg_or_bg_code}};{{r}};{{g}};{{b}}m'.format(csi=CSI)
 
 # "\x1b[38;{r};{g};{b}m":
-ENCODE_RGB_FG = ('{csi}{fg_or_bg};{{r}};{{g}};{{b}}m'
+ENCODE_RGB_FG = ('{csi}{fg_or_bg_code};{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=FG_CODE))
 
 # "\x1b[48;{r};{g};{b}m":
-ENCODE_RGB_BG = ('{csi}{fg_or_bg};{{r}};{{g}};{{b}}m'
+ENCODE_RGB_BG = ('{csi}{fg_or_bg_code};{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=BG_CODE))
 
 # matches as much as `#f3f3f3` as `f3f3f3` returning three hex groups, r, g, b.
@@ -183,10 +183,10 @@ class Colorize:
 
         if palette in self.palette.keys():
 
-            fg, bg = self.palette[palette]
+            fg, bg, attrs = self.palette[palette]
 
-            escaped_attrs = _encode_attributes(attributes)
-            escaped_bg_and_fg = self._escape_bg_fg(palette)
+            escaped_attrs = self._encode_attributes(attrs)
+            escaped_fg_and_bg = self._encode_fg_bg(palette)
             #colorized = _escape(*fg) + _escape(*bg, True) + data + RESET
             colorized = str().join([escaped_attrs, escaped_fg_and_bg, data])
 
@@ -207,8 +207,11 @@ class Colorize:
         encoded = str()
 
         if fg:
-            encoded += ENCODE_RGB_FG.format(*fg)
+            r, g, b = fg
+            encoded += ENCODE_RGB_FG.format(r=r, g=g, b=b)
+
         if bg:
-            encoded += ENCODE_RGB_BG.format(*bg)
+            r, g, b = bg
+            encoded += ENCODE_RGB_BG.format(r=r, g=g, b=b)
 
         return encoded
