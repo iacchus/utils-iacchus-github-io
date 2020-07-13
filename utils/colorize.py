@@ -1,4 +1,5 @@
 import re
+import pprint
 
 CSI = '\x1b['  # Control Sequence Indicator
 
@@ -87,17 +88,15 @@ RESET_CODE = CODES['normal']
 
 ATTRIBUTES = CODES.keys()
 
-# This can be .format()'ted or used as f-string.
+# These can be .format()'ted.
 # "\x1b[{code}m":
-
 ENCODE_ATTR = '{csi}{{code}}m'.format(csi=CSI)
 CSI_ESCAPE = '{csi}{{codeseq}}m'.format(csi=CSI)
 
-# these are so to be used as f-strings:
-#
 # "\x1b[{fg_or_bg_code};2;{r};{g};{b}m":
 ENCODE_RGB = '{csi}{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}m'.format(csi=CSI)
 # "{fg_or_bg_code};2;{r};{g};{b}":
+RGB_CODESEQ = '{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}'.format(csi=CSI)
 RGB_CODESEQ = '{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}'.format(csi=CSI)
 
 # "\x1b[38;2;{r};{g};{b}m":
@@ -106,12 +105,14 @@ ENCODE_RGB_FG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
 # "38;2;{r};{g};{b}":
 FG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}}'
                   .format(csi=CSI, fg_or_bg_code=FG_CODE))
+FG_RGB_CODESEQ = ('{fg_or_bg_code}:2:{{r}}:{{g}}:{{b}}'
+                  .format(csi=CSI, fg_or_bg_code=FG_CODE))
 
 # "\x1b[48;2;{r};{g};{b}m":
 ENCODE_RGB_BG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=BG_CODE))
 # "48;2;{r};{g};{b}":
-BG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}}'
+BG_RGB_CODESEQ = ('{fg_or_bg_code}:2:{{r}}:{{g}}:{{b}}'
                   .format(csi=CSI, fg_or_bg_code=BG_CODE))
 
 # "\x1b[0m"
@@ -190,10 +191,6 @@ class Colorize:
             attrs_seq = self._encode_attributes(attrs)
             attrs_codeseq = self._attributes_code_seq(attrs)
 
-            PALETTE_SEQ = "{csi}{attrs_codeseq}{fg_codeseq}{bg_codeseq}m"
-            #palette_seq = attrs_seq + fg_seq + bg_seq
-            #palette_seq = ENCODE_ATTR.format(code=attrs_codeseq + fg_codeseq
-            #                                 + bg_codeseq)
             palette_seq, codeseq = self._encode_codeseqs([attrs_codeseq,
                                                           fg_codeseq,
                                                           bg_codeseq])
@@ -222,16 +219,28 @@ class Colorize:
 
         if palette in self.palettes.keys():
 
-            colorized = str().join([self.palettes[palette]['seq'], data])
+            colorized = str().join([self.palettes[palette]['seq'], data,
+                                    RESET])
 
             return colorized
 
 
-    def list_palettes(self):
+    def list_palettes(self, use_pprint=False):
 
-        for key, value in self.palettes:
-            pass
+        print()
 
+        for key, value in self.palettes.items():
+
+            # TODO - RETURN ME!!!
+            #        or don't.
+            print(self.from_palette(palette=key,
+                                    data=f" {key.upper()} EXAMPLE "))
+            if not use_pprint:
+                print(f"Palette name: '{key}'", f"{value}",
+                      sep='\n', end='\n\n')
+            else:
+                pprint.pprint(f"Palette `{key}': {value}")
+                print()
 
     def get_palette_escape_sequencies(self, palette):
         """Return the escape sequence for a palette.
@@ -246,7 +255,7 @@ class Colorize:
         pass
 
 
-    def delete_palette(self, pallete):
+    def delete_palette(self, palette):
         """Deletes the palette."""
 
         if self.palettes.pop(palette, None):
@@ -301,22 +310,8 @@ class Colorize:
 
     def _encode_codeseqs(self, codeseq_list):
 
-        codeseq_str = str(';').join(codeseq_list)
+        codeseq_str = str(';').join([codeseq for codeseq in codeseq_list
+                                     if len(codeseq) > 0])
 
         return (CSI_ESCAPE.format(codeseq=codeseq_str), codeseq_str)
-#     def _encode_fg_bg(self, palette, fg=True, bg=True):
-# 
-#         fg, bg, attrs = self.palettes[palette]
-# 
-#         encoded = str()
-# 
-#         if fg:
-#             r, g, b = fg
-#             encoded += ENCODE_RGB_FG.format(r=fg[R_INDEX], g=fg[G_INDEX],
-#                                             b=fg[B_INDEX])
-# 
-#         if bg:
-#             encoded += ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
-#                                             b=bg[B_INDEX])
-# 
-#         return encoded
+

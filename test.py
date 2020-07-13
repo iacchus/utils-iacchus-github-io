@@ -23,3 +23,4 @@ print(c)
 print(d)
 print(e)
 
+a.list_palettes(use_pprint=True)
