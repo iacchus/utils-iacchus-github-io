@@ -99,10 +99,14 @@ ENCODE_RGB = '{csi}{{fg_or_bg_code}};2;{{r}};{{g}};{{b}}m'.format(csi=CSI)
 # "\x1b[38;2;{r};{g};{b}m":
 ENCODE_RGB_FG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=FG_CODE))
+FG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}};'
+                  .format(csi=CSI, fg_or_bg_code=FG_CODE))
 
 # "\x1b[48;2;{r};{g};{b}m":
 ENCODE_RGB_BG = ('{csi}{fg_or_bg_code};2;{{r}};{{g}};{{b}}m'
                  .format(csi=CSI, fg_or_bg_code=BG_CODE))
+BG_RGB_CODESEQ = ('{fg_or_bg_code};2;{{r}};{{g}};{{b}};'
+                  .format(csi=CSI, fg_or_bg_code=BG_CODE))
 
 # "\x1b[0m"
 RESET = ENCODE_ATTR.format(code=RESET_CODE)
@@ -160,9 +164,6 @@ class Colorize:
 
     def add_palette(self, name, foreground, background, attrs=[]):
 
-        #
-        # TODO: SANITIZE THESE ENTRIES. PEOPLE MAKE MISTAKES.
-        #
         attributes = [attr for attr in attrs if attr in ATTRIBUTES]
 
         fg, bg = (hexcolor_to_rgb(foreground), hexcolor_to_rgb(background))
@@ -171,12 +172,17 @@ class Colorize:
 
             fg_seq = ENCODE_RGB_FG.format(r=fg[R_INDEX], g=fg[G_INDEX],
                                           b=fg[B_INDEX])
+            fg_codeseq = FG_RGB_CODESEQ.format(r=fg[R_INDEX], g=fg[G_INDEX],
+                                          b=fg[B_INDEX])
 
             bg_seq = ENCODE_RGB_BG.format(r=bg[R_INDEX], g=bg[G_INDEX],
+                                          b=bg[B_INDEX])
+            bg_codeseq = BG_RGB_CODESEQ.format(r=bg[R_INDEX], g=bg[G_INDEX],
                                           b=bg[B_INDEX])
 
             attrs_seq = self._encode_attributes(attrs)
 
+            PALETTE_SEQ = "{csi}{attrs_codeseq}{fg_codeseq}{bg_codeseq}m"
             palette_seq = attrs_seq + fg_seq + bg_seq
 
             palette = dict()
@@ -190,6 +196,8 @@ class Colorize:
                 'bg_seq': bg_seq,
                 'attrs_seq': attrs_seq,
                 'seq': palette_seq,
+                'fg_codeseq': fg_codeseq,
+                'bg_codeseq': bg_codeseq,
                 'attrs_codeseq': self._attributes_code_seq(attrs)
                 })
 
