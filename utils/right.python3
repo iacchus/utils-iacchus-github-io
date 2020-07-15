@@ -9,9 +9,11 @@ lines = [line.expandtabs().strip('\n') for line in linelist]
 biggest_line_size = max([len(line) for line in lines])
 
 columns = int(os.popen('tput cols', 'r').read())
-offset = biggest_line_size / 2
-perfect_center = columns / 2
-padsize =  int(perfect_center - offset)
+#offset = biggest_line_size / 2
+#perfect_center = columns / 2
+#padsize =  int(perfect_center - offset)
+right_pad_size = 1
+padsize = columns - biggest_line_size - right_pad_size
 spacing = ' ' * padsize # space char
 divider = spacing + ('\u2500' * int(biggest_line_size)) # unicode 0x2500
 
